@@ -58,7 +58,7 @@ Arthashila ("Pillar of Purpose") is a comprehensive system monitoring and task m
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/Arthashila.git
+git clone https://github.com/ArindamHore-Student/Arthashila.git
 cd Arthashila
 ```
 
