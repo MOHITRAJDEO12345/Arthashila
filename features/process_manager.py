@@ -1,5 +1,4 @@
 import streamlit as st
-import psutil
 import pandas as pd
 import time
 import plotly.express as px
@@ -10,6 +9,9 @@ import sys
 
 # Add the project root directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import platform-independent utilities
+from utils.platform_utils import get_cpu_info, get_memory_info, get_process_list
 
 def create_gauge_chart(value, title, max_value=100):
     """Create a gauge chart for displaying values like CPU usage."""
@@ -66,9 +68,13 @@ def process_manager():
     # Current time
     st.markdown(f"<div style='color: #888888; margin-bottom: 20px;'>Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>", unsafe_allow_html=True)
     
-    # System resource overview
-    cpu_percent = psutil.cpu_percent()
-    memory = psutil.virtual_memory()
+    # System resource overview using platform-independent utilities
+    cpu_info = get_cpu_info()
+    memory_info = get_memory_info()
+    
+    # Calculate CPU percent as average of all cores
+    cpu_percent = sum(cpu_info["per_core_usage"]) / len(cpu_info["per_core_usage"]) if cpu_info["per_core_usage"] else 0
+    memory_percent = memory_info["virtual"]["percent"]
     
     col1, col2 = st.columns(2)
     
@@ -77,7 +83,7 @@ def process_manager():
         st.plotly_chart(cpu_fig, use_container_width=True)
     
     with col2:
-        mem_fig = create_gauge_chart(memory.percent, "Memory Usage (%)")
+        mem_fig = create_gauge_chart(memory_percent, "Memory Usage (%)")
         st.plotly_chart(mem_fig, use_container_width=True)
     
     # Process management options
@@ -95,45 +101,19 @@ def process_manager():
     with filter_col2:
         search_term = st.text_input("Search Process", placeholder="Enter process name...")
     
-    # Get process list
-    processes = []
-    for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_info', 'status', 'create_time']):
-        try:
-            # Get process information
-            proc_info = proc.info
-            if search_term and search_term.lower() not in proc_info['name'].lower():
-                continue
-                
-            # Get memory in MB
-            memory_mb = proc_info['memory_info'].rss / (1024 * 1024) if proc_info['memory_info'] else 0
-            
-            # Get process create time
-            if proc_info['create_time']:
-                create_time = datetime.fromtimestamp(proc_info['create_time']).strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                create_time = "Unknown"
-            
-            processes.append({
-                'pid': proc_info['pid'],
-                'name': proc_info['name'],
-                'username': proc_info['username'],
-                'cpu_percent': proc_info['cpu_percent'],
-                'memory_mb': memory_mb,
-                'status': proc_info['status'],
-                'create_time': create_time
-            })
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            continue
-    
-    # Sort processes
+    # Get process list using platform-independent function
+    sort_by_param = "cpu_percent"
     if sort_by == "CPU Usage (%)":
-        processes = sorted(processes, key=lambda x: x['cpu_percent'], reverse=True)
+        sort_by_param = "cpu_percent"
     elif sort_by == "Memory Usage (MB)":
-        processes = sorted(processes, key=lambda x: x['memory_mb'], reverse=True)
+        sort_by_param = "memory_mb"
     elif sort_by == "Process ID":
-        processes = sorted(processes, key=lambda x: x['pid'])
+        sort_by_param = "pid"
     else:  # Process Name
-        processes = sorted(processes, key=lambda x: x['name'].lower())
+        sort_by_param = "name"
+        
+    # Get processes using platform-independent function
+    processes = get_process_list(sort_by=sort_by_param, search_term=search_term)
     
     # Display top resource-consuming processes
     top_processes = processes[:5]
@@ -229,7 +209,7 @@ def process_manager():
                         
                         # Memory Usage
                         st.markdown("**Memory Usage**")
-                        memory_percent = min(row['memory_mb'] / (memory.total / (1024 * 1024)) * 100, 100)
+                        memory_percent = min(row['memory_mb'] / (memory_info["virtual"]["total"] / (1024 * 1024)) * 100, 100)
                         st.progress(memory_percent / 100)
                         st.markdown(f"<div style='text-align: right;'>{row['memory_mb']:.2f} MB</div>", unsafe_allow_html=True)
                         

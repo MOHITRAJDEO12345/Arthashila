@@ -208,15 +208,21 @@ def render_system_status():
     """
     Display real-time system status metrics in the sidebar.
     Shows CPU, memory, and disk usage with appropriate color coding.
+    Uses platform-independent utilities to get system information.
     """
-    import psutil
+    from utils.platform_utils import get_cpu_info, get_memory_info, get_disk_info
     
     st.markdown("### System Status")
     
-    # Get current system metrics
-    cpu_percent = psutil.cpu_percent()
-    memory = psutil.virtual_memory()
-    disk = psutil.disk_usage('/')
+    # Get current system metrics using platform-independent functions
+    cpu_info = get_cpu_info()
+    memory_info = get_memory_info()
+    disk_info = get_disk_info()
+    
+    # Extract percentages
+    cpu_percent = sum(cpu_info["per_core_usage"]) / len(cpu_info["per_core_usage"]) if cpu_info["per_core_usage"] else 0
+    memory_percent = memory_info["virtual"]["percent"]
+    disk_percent = disk_info[0]["percent"] if disk_info else 0
     
     # Helper function to determine color based on usage percentage
     def get_usage_color(percent):
@@ -232,33 +238,33 @@ def render_system_status():
     st.markdown(
         f"<div style='display: flex; align-items: center;'>"
         f"<div>🔄 CPU Usage</div>"
-        f"<div style='margin-left: auto; font-weight: bold; color: {cpu_color};'>{cpu_percent}%</div>"
+        f"<div style='margin-left: auto; font-weight: bold; color: {cpu_color};'>{cpu_percent:.1f}%</div>"
         f"</div>", 
         unsafe_allow_html=True
     )
     st.progress(cpu_percent / 100)
     
     # Memory status with icon
-    memory_color = get_usage_color(memory.percent)
+    memory_color = get_usage_color(memory_percent)
     st.markdown(
         f"<div style='display: flex; align-items: center;'>"
         f"<div>🧠 Memory Usage</div>"
-        f"<div style='margin-left: auto; font-weight: bold; color: {memory_color};'>{memory.percent}%</div>"
+        f"<div style='margin-left: auto; font-weight: bold; color: {memory_color};'>{memory_percent}%</div>"
         f"</div>", 
         unsafe_allow_html=True
     )
-    st.progress(memory.percent / 100)
+    st.progress(memory_percent / 100)
     
     # Disk usage with icon
-    disk_color = get_usage_color(disk.percent)
+    disk_color = get_usage_color(disk_percent)
     st.markdown(
         f"<div style='display: flex; align-items: center;'>"
         f"<div>💽 Disk Usage</div>"
-        f"<div style='margin-left: auto; font-weight: bold; color: {disk_color};'>{disk.percent}%</div>"
+        f"<div style='margin-left: auto; font-weight: bold; color: {disk_color};'>{disk_percent}%</div>"
         f"</div>", 
         unsafe_allow_html=True
     )
-    st.progress(disk.percent / 100)
+    st.progress(disk_percent / 100)
 
 def render_footer():
     """
