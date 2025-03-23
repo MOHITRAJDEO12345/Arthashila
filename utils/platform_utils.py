@@ -9,6 +9,7 @@ import platform
 import psutil
 import os
 import sys
+import time  # Required for caching mechanism
 
 # Constants for platform identification
 PLATFORM_WINDOWS = "windows"
@@ -190,9 +191,14 @@ def get_battery_info():
         # Return None if we can't get battery information
         return None
 
+# Cache for process list to avoid frequent expensive calls
+_process_cache = {}
+_last_cache_time = 0
+_cache_ttl = 2  # Cache TTL in seconds
+
 def get_process_list(sort_by="cpu_percent", search_term=None):
     """
-    Get platform-independent process list.
+    Get platform-independent process list with caching for better performance.
     
     Args:
         sort_by (str): Field to sort processes by (cpu_percent, memory_mb, pid, name)
@@ -201,23 +207,46 @@ def get_process_list(sort_by="cpu_percent", search_term=None):
     Returns:
         list: List of dictionaries containing process information
     """
+    global _process_cache, _last_cache_time
+    
+    # Create cache key based on sort and search parameters
+    cache_key = f"{sort_by}_{search_term}"
+    current_time = time.time()
+    
+    # Return cached result if available and not expired
+    if cache_key in _process_cache and (current_time - _last_cache_time) < _cache_ttl:
+        return _process_cache[cache_key]
+    
     processes = []
     
     try:
-        for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_info', 'status', 'create_time']):
+        # Only request the fields we actually need to improve performance
+        fields = ['pid', 'name', 'username', 'cpu_percent', 'memory_info', 'status', 'create_time']
+        
+        # Pre-filter processes if search term is provided to reduce processing
+        for proc in psutil.process_iter(fields):
             try:
                 # Get process information
                 proc_info = proc.info
+                
+                # Skip PID 0 (system idle process) to make the task manager more realistic
+                if proc_info['pid'] == 0:
+                    continue
+                    
+                # Skip processes that don't match the search term
                 if search_term and search_term.lower() not in proc_info['name'].lower():
                     continue
                     
-                # Get memory in MB
-                memory_mb = proc_info['memory_info'].rss / (1024 * 1024) if proc_info['memory_info'] else 0
+                # Get memory in MB - only calculate if we have memory info
+                memory_mb = 0
+                if proc_info['memory_info']:
+                    memory_mb = proc_info['memory_info'].rss / (1024 * 1024)
                 
-                # Get process create time
+                # Get process create time - only format if needed
                 create_time = "Unknown"
                 if proc_info['create_time']:
                     try:
+                        # Import datetime only once outside the loop
                         from datetime import datetime
                         create_time = datetime.fromtimestamp(proc_info['create_time']).strftime('%Y-%m-%d %H:%M:%S')
                     except Exception:
@@ -235,15 +264,19 @@ def get_process_list(sort_by="cpu_percent", search_term=None):
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 continue
         
-        # Sort processes
+        # Sort processes - use key functions optimized for each sort type
         if sort_by == "cpu_percent":
-            processes = sorted(processes, key=lambda x: x['cpu_percent'], reverse=True)
+            processes.sort(key=lambda x: x['cpu_percent'], reverse=True)
         elif sort_by == "memory_mb":
-            processes = sorted(processes, key=lambda x: x['memory_mb'], reverse=True)
+            processes.sort(key=lambda x: x['memory_mb'], reverse=True)
         elif sort_by == "pid":
-            processes = sorted(processes, key=lambda x: x['pid'])
+            processes.sort(key=lambda x: x['pid'])
         else:  # Process Name
-            processes = sorted(processes, key=lambda x: x['name'].lower())
+            processes.sort(key=lambda x: x['name'].lower())
+        
+        # Update cache
+        _process_cache[cache_key] = processes
+        _last_cache_time = current_time
             
         return processes
     except Exception as e:

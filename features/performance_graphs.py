@@ -45,17 +45,27 @@ def initialize_session_state():
 def update_performance_data():
     """
     Collect current system performance metrics and add them to the data deques.
+    Optimized to reduce CPU usage during data collection.
     
     Returns:
         tuple: Current CPU and memory usage percentages
     """
     current_time = time.time()
-    cpu_percent = psutil.cpu_percent(interval=0.1)  # Quick sampling
-    memory_percent = psutil.virtual_memory().percent
     
-    # Add to data collections
-    st.session_state.cpu_data.append((current_time, cpu_percent))
-    st.session_state.memory_data.append((current_time, memory_percent))
+    # Use a single call to get virtual memory to avoid multiple system calls
+    memory = psutil.virtual_memory()
+    memory_percent = memory.percent
+    
+    # Get CPU percent with minimal interval for better performance
+    cpu_percent = psutil.cpu_percent(interval=0.05)  # Reduced sampling interval
+    
+    # Add to data collections only if they've changed significantly (>0.5%)
+    # or if the collection is empty
+    if not st.session_state.cpu_data or abs(st.session_state.cpu_data[-1][1] - cpu_percent) > 0.5:
+        st.session_state.cpu_data.append((current_time, cpu_percent))
+    
+    if not st.session_state.memory_data or abs(st.session_state.memory_data[-1][1] - memory_percent) > 0.5:
+        st.session_state.memory_data.append((current_time, memory_percent))
     
     return cpu_percent, memory_percent
 
