@@ -10,8 +10,6 @@
 
 Arthashila ("Pillar of Purpose") is a comprehensive system monitoring and task management application built with Streamlit. It provides real-time insights into system resources, process management, performance metrics, and battery usage, along with productivity features like task planning and team collaboration tools.
 
-![Arthashila Screenshot](https://i.imgur.com/placeholder.png) <!-- Replace with actual screenshot URL -->
-
 ## ✨ Features
 
 ### 📊 System Overview
@@ -60,11 +58,6 @@ Arthashila ("Pillar of Purpose") is a comprehensive system monitoring and task m
 ```bash
 git clone https://github.com/yourusername/Arthashila.git
 cd Arthashila
-```
-
-2. Install the package in development mode:
-```bash
-pip install -e .
 ```
 
 ### Option 2: Install Dependencies Directly
