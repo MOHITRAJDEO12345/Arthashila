@@ -143,4 +143,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🔗 Links
 
 - [GitHub Repository](https://github.com/yourusername/Arthashila)
-- [Report Issues](https://github.com/yourusername/Arthashila/issues) 
+- [Report Issues](https://github.com/ArindamHore-Student/Arthashila/issues) 
