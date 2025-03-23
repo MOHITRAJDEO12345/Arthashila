@@ -56,7 +56,7 @@ Arthashila ("Pillar of Purpose") is a comprehensive system monitoring and task m
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/Arthashila.git
+git clone https://github.com/ArindamHore-Student/Arthashila.git
 cd Arthashila
 ```
 
@@ -135,10 +135,6 @@ Each module and function in the codebase is documented with docstrings following
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 👥 Team
-
-- Arthashila Team
 
 ## 🔗 Links
 
